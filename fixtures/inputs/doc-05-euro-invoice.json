@@ -1,0 +1,7 @@
+{
+  "from": "facturacion@lumen-print.es",
+  "subject": "Factura / Invoice LP-7781",
+  "received_at": "2026-10-15T10:00:00Z",
+  "body": "Adjuntamos la factura. / Invoice attached.",
+  "attachment_text": "LUMEN PRINT S.L.\nInvoice LP-7781\nDate: 15 October 2026\nDue: 14 November 2026\nBase imponible / Subtotal: €1.037,39\nIVA 21% / VAT: €197,11\nTotal: €1.234,50"
+}

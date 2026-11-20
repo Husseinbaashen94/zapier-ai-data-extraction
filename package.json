@@ -1,0 +1,28 @@
+{
+  "name": "zapier-ai-data-extraction",
+  "version": "1.0.0",
+  "description": "Zapier + Claude: turn order, invoice and enquiry emails into clean spreadsheet rows, with a review queue for anything uncertain",
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "demo": "tsx scripts/demo.ts",
+    "record": "tsx scripts/record.ts",
+    "build:guide": "tsx scripts/build-guide.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^1.11.0",
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1",
+    "zod": "^4.6.7"
+  }
+}

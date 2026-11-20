@@ -1,0 +1,147 @@
+{
+  "doc-01-order": {
+    "destination_sheet": "Extracted",
+    "doc_type": "order",
+    "fields": {
+      "customer_name": "Maria Lopez",
+      "customer_email": "maria.lopez@example.com",
+      "order_number": "SO-10482",
+      "order_date": "2026-11-18",
+      "items_summary": "3 x Trail Runner Pro (size 42); 1 x Merino Socks",
+      "total": 389.97,
+      "currency": "USD"
+    }
+  },
+  "doc-02-invoice-vat": {
+    "destination_sheet": "Extracted",
+    "doc_type": "invoice",
+    "fields": {
+      "supplier_name": "Northwind Office Supplies Ltd",
+      "invoice_number": "INV-2026-0931",
+      "invoice_date": "2026-11-02",
+      "due_date": "2026-12-02",
+      "subtotal": 1250,
+      "tax": 250,
+      "total": 1500,
+      "currency": "GBP"
+    }
+  },
+  "doc-03-enquiry": {
+    "destination_sheet": "Extracted",
+    "doc_type": "enquiry",
+    "fields": {
+      "contact_name": "Daniel Brooks",
+      "contact_email": "d.brooks@harbourdental.co.uk",
+      "company": "Harbour Dental Group",
+      "topic": "Bulk pricing for 12 clinics",
+      "requested_action": "Send a quote and book a call next week"
+    }
+  },
+  "doc-04-ambiguous-date": {
+    "destination_sheet": "Needs review",
+    "doc_type": "order",
+    "fields": {
+      "customer_name": "Tom Becker",
+      "customer_email": "tom.becker@example.org",
+      "order_number": "SO-10490",
+      "order_date": "03/04/2026",
+      "items_summary": "2 x Camping Stove",
+      "total": 119.98,
+      "currency": "USD"
+    }
+  },
+  "doc-05-euro-invoice": {
+    "destination_sheet": "Extracted",
+    "doc_type": "invoice",
+    "fields": {
+      "supplier_name": "Lumen Print S.L.",
+      "invoice_number": "LP-7781",
+      "invoice_date": "2026-10-15",
+      "due_date": "2026-11-14",
+      "subtotal": 1037.39,
+      "tax": 197.11,
+      "total": 1234.5,
+      "currency": "EUR"
+    }
+  },
+  "doc-06-missing-total": {
+    "destination_sheet": "Needs review",
+    "doc_type": "order",
+    "fields": {
+      "customer_name": "Aisha Khan",
+      "customer_email": "aisha.khan@example.com",
+      "order_number": "SO-10511",
+      "order_date": "2026-11-10",
+      "items_summary": "4 x Insulated Bottle",
+      "total": "",
+      "currency": "USD"
+    }
+  },
+  "doc-07-scanned-invoice": {
+    "destination_sheet": "Needs review",
+    "doc_type": "invoice",
+    "fields": {
+      "supplier_name": "Greenline Logistics Inc",
+      "invoice_number": "GL-4027",
+      "invoice_date": "2026-11-11",
+      "due_date": "2026-12-11",
+      "subtotal": 840,
+      "tax": 67.2,
+      "total": 907.2,
+      "currency": "USD"
+    }
+  },
+  "doc-08-forwarded-chain": {
+    "destination_sheet": "Extracted",
+    "doc_type": "order",
+    "fields": {
+      "customer_name": "Kenji Sato",
+      "customer_email": "kenji@satodesign.jp",
+      "order_number": "SO-10519",
+      "order_date": "2026-11-15",
+      "items_summary": "8 x Ergonomic Chair",
+      "total": 1040,
+      "currency": "USD"
+    }
+  },
+  "doc-09-newsletter": {
+    "destination_sheet": "Needs review",
+    "doc_type": "other",
+    "fields": {}
+  },
+  "doc-10-injection": {
+    "destination_sheet": "Needs review",
+    "doc_type": "order",
+    "fields": {
+      "customer_name": "Quick Buyer",
+      "customer_email": "buyer@quickflip.xyz",
+      "order_number": "SO-10601",
+      "order_date": "2026-11-18",
+      "items_summary": "6 x Premium Tent",
+      "total": 2400,
+      "currency": "USD"
+    }
+  },
+  "doc-11-formula-company": {
+    "destination_sheet": "Extracted",
+    "doc_type": "enquiry",
+    "fields": {
+      "contact_name": "Sam Ortiz",
+      "contact_email": "sam@ortiz-studio.example",
+      "company": "'=HYPERLINK(\"http://evil.example\",\"Ortiz Studio\")",
+      "topic": "Reseller partnership",
+      "requested_action": "Send partner terms"
+    }
+  },
+  "doc-12-arabic-enquiry": {
+    "destination_sheet": "Extracted",
+    "doc_type": "enquiry",
+    "fields": {
+      "contact_name": "ليلى حداد",
+      "contact_email": "layla@alwaha-restaurants.ae",
+      "company": "مطاعم الواحة",
+      "topic": "أسعار نظام الحجوزات لـ ٨ فروع",
+      "requested_action": "إرسال عرض سعر"
+    }
+  }
+}

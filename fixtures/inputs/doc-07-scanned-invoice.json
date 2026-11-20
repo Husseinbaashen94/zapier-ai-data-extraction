@@ -1,0 +1,7 @@
+{
+  "from": "billing@greenline-logistics.com",
+  "subject": "Scanned invoice",
+  "received_at": "2026-11-12T07:55:00Z",
+  "body": "See scanned invoice attached.",
+  "attachment_text": "GREENL1NE LOGIST1CS INC\nInv0ice N0: GL-4O27\nDate: 2026-11-11   Due: 2026-12-11\nFreight Nov ..... 840.00\nSubtota1: 840.00 USD\nTax: 67.20 USD\nT0TAL: 907.20 USD"
+}

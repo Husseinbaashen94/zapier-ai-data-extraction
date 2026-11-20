@@ -1,0 +1,7 @@
+{
+  "from": "accounts@northwind-supplies.co.uk",
+  "subject": "Invoice INV-2026-0931",
+  "received_at": "2026-11-02T16:40:00Z",
+  "body": "Please find attached our invoice. Payment terms: 30 days.",
+  "attachment_text": "NORTHWIND OFFICE SUPPLIES LTD\nInvoice No: INV-2026-0931\nInvoice date: 2 November 2026\nDue date: 2 December 2026\n\nOffice chairs x5 ........ £1,000.00\nDesk lamps x10 .......... £250.00\nSubtotal: £1,250.00\nVAT (20%): £250.00\nTOTAL DUE: £1,500.00"
+}
