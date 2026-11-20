@@ -92,17 +92,17 @@ export function renderZapierAiStep(): string {
 
 > Generated from \`prompts/extract.md\` by \`npm run build:guide\`. Don't edit by hand.
 
-Add an **Anthropic (Claude)** action, event **Send Message**, and fill in the fields below.
+Add an **Anthropic (Claude)** action with the event **Send Message**, and fill in its fields as below. Field names come from Zapier's Anthropic app page, checked on 2026-11-20.
 
-## Model
+## Model (required)
 
 \`${DEFAULT_MODEL}\`, or the newest Claude model the app offers. Use the same model you evaluate with \`npm run test:live\`.
 
 ## Max tokens
 
-\`16000\`
+If the step offers a max-tokens setting (Zapier groups extra settings under **Advanced**), set \`16000\`. Opus models think before answering, and that thinking counts against this limit.
 
-## System prompt
+## System (optional in Zapier, required for this Zap)
 
 Paste exactly:
 
@@ -110,7 +110,7 @@ Paste exactly:
 ${renderSystemPrompt()}
 \`\`\`\`
 
-## User message
+## User Message (required)
 
 Paste this, then replace each \`{{…}}\` placeholder by inserting the matching field from the Gmail trigger step:
 
@@ -120,7 +120,7 @@ Paste this, then replace each \`{{…}}\` placeholder by inserting the matching 
 | \`${from}\` | From |
 | \`${date}\` | Date |
 | \`${body}\` | Body Plain |
-| \`${attachment}\` | the text of the first attachment, from Zapier's built-in PDF-to-text step if your plan includes it. Otherwise type \`none\` |
+| \`${attachment}\` | text extracted from the attachment, if you add a step that extracts it. Otherwise type \`none\`: emails with the details in the body work without it |
 
 \`\`\`\`text
 ${message}
