@@ -1,0 +1,5 @@
+{
+  "synthetic": true,
+  "model": "claude-opus-5-5",
+  "text": "{\"doc_type\": \"invoice\", \"fields\": {\"supplier_name\": \"Greenline Logistics Inc\", \"invoice_number\": \"GL-4027\", \"invoice_date\": \"2026-11-11\", \"due_date\": \"2026-12-11\", \"subtotal\": \"840.00 USD\", \"tax\": \"67.20 USD\", \"total\": \"907.20 USD\", \"currency\": \"USD\"}, \"field_confidence\": {\"supplier_name\": 0.8, \"invoice_number\": 0.62, \"invoice_date\": 0.95, \"due_date\": 0.95, \"subtotal\": 0.95, \"tax\": 0.95, \"total\": 0.95, \"currency\": 0.95}, \"overall_confidence\": 0.78}"
+}

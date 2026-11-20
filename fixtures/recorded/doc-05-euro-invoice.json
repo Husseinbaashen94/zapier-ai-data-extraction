@@ -1,0 +1,5 @@
+{
+  "synthetic": true,
+  "model": "claude-opus-5-5",
+  "text": "{\"doc_type\": \"invoice\", \"fields\": {\"supplier_name\": \"Lumen Print S.L.\", \"invoice_number\": \"LP-7781\", \"invoice_date\": \"15 October 2026\", \"due_date\": \"14 November 2026\", \"subtotal\": \"€1.037,39\", \"tax\": \"€197,11\", \"total\": \"€1.234,50\", \"currency\": \"EUR\"}, \"field_confidence\": {\"supplier_name\": 0.95, \"invoice_number\": 0.95, \"invoice_date\": 0.95, \"due_date\": 0.95, \"subtotal\": 0.95, \"tax\": 0.95, \"total\": 0.95, \"currency\": 0.95}, \"overall_confidence\": 0.93}"
+}
