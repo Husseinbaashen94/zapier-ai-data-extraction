@@ -64,6 +64,7 @@ This is the exact code the repo's tests run, so don't edit it in Zapier. Change 
 - **Worksheet:** choose **Custom** (the option to enter or map a value) and map the Code step's **`destination_sheet`**. That sends each row to `Extracted` or `Needs review` without needing Paths.
   - If your account doesn't offer a custom worksheet value here, pick **`Extracted`** for every row instead. The `needs_review` and `review_reasons` columns still flag the rows to check, and a filter view on `needs_review = TRUE` gives you the review queue.
 - **Columns:** map each column to the Code step output with the same name.
+- **Format as Plain text** (Format → Number → Plain text) the columns whose values must not be re-read by Sheets: `order_number`, `invoice_number`, `order_date`, `invoice_date` and `due_date`. The Code step already stores ambiguous dates with a leading `'`, so Sheets keeps them as written. Plain-text columns also keep leading zeros in IDs such as `00123`.
 
 ## 6. Test end to end, then turn the Zap on
 

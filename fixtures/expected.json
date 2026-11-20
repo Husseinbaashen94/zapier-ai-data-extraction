@@ -44,7 +44,7 @@
       "customer_name": "Tom Becker",
       "customer_email": "tom.becker@example.org",
       "order_number": "SO-10490",
-      "order_date": "03/04/2026",
+      "order_date": "'03/04/2026",
       "items_summary": "2 x Camping Stove",
       "total": 119.98,
       "currency": "USD"

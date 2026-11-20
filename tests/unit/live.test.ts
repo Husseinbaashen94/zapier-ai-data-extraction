@@ -5,7 +5,7 @@ import { answerText, extractLive, hasAnthropicCredentials } from '../../src/live
 const email = JSON.parse(readFileSync('fixtures/inputs/doc-01-order.json', 'utf8'));
 
 describe('extractLive', () => {
-  it('sends the extraction request with the fallback beta through the beta endpoint', async () => {
+  it('sends what the real Zap sends (no structured output), with the fallback beta, through the beta endpoint', async () => {
     let sent: Record<string, unknown> | undefined;
     const client = {
       beta: {
@@ -22,8 +22,9 @@ describe('extractLive', () => {
       model: 'claude-opus-5-5',
       fallbacks: 'default',
       betas: ['server-side-fallback-2026-07-01'],
-      output_config: { effort: 'medium', format: { type: 'json_schema' } },
+      output_config: { effort: 'medium' },
     });
+    expect((sent!.output_config as Record<string, unknown>).format).toBeUndefined();
     expect((sent!.messages as { content: string }[])[0].content).toContain('SO-10482');
   });
 });

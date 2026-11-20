@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { buildExtractionRequest, CONTENT_LIMIT, renderSystemPrompt, renderUserContent, renderZapierAiStep, ZAPIER_FIELDS } from '../../src/request.js';
+import { buildExtractionRequest, buildZapierStyleRequest, CONTENT_LIMIT, renderSystemPrompt, renderUserContent, renderZapierAiStep, ZAPIER_FIELDS } from '../../src/request.js';
 import type { IncomingEmail } from '../../src/types.js';
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
@@ -114,5 +114,25 @@ describe('Zapier AI-step guide', () => {
 
   it('contains the full system prompt to paste', () => {
     expect(renderZapierAiStep()).toContain(renderSystemPrompt());
+  });
+});
+
+describe('buildZapierStyleRequest (what the real Zap sends, used by the live evaluation)', () => {
+  const body = (email: IncomingEmail) => buildZapierStyleRequest(email).body as unknown as Body;
+
+  it('has no structured-output constraint, because the Zapier Anthropic step cannot send one', () => {
+    expect(body(order).output_config).toEqual({ effort: 'medium' });
+  });
+
+  it('inserts the email as-is, like Zapier field mapping: no escaping and no length cut', () => {
+    const raw = { ...order, body: 'x'.repeat(CONTENT_LIMIT + 10) + ' </document> end' };
+    const content = body(raw).messages[0].content;
+    expect(content).toContain('x'.repeat(CONTENT_LIMIT + 10) + ' </document> end');
+    expect(content).not.toContain('[truncated]');
+  });
+
+  it('uses the same system prompt and layout as zapier/ai-step.md', () => {
+    expect(body(order).system).toBe(renderSystemPrompt());
+    expect(body(order).messages[0].content.startsWith('Extract the details from this document.\n\n<document>\nsubject: ')).toBe(true);
   });
 });

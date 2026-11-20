@@ -34,8 +34,11 @@ const escapeHtml = (value: unknown) =>
   String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 const AMOUNT_COLUMNS = new Set(['subtotal', 'tax', 'total']);
+/** Displays a cell as Google Sheets shows it: a leading ' only marks text and is hidden. */
 const fmt = (column: string, value: unknown) =>
-  typeof value === 'number'
+  typeof value === 'string' && value.startsWith("'")
+    ? value.slice(1)
+    : typeof value === 'number'
     ? AMOUNT_COLUMNS.has(column)
       ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : String(value)

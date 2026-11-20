@@ -94,4 +94,17 @@ describe('renderPreview', () => {
   it('shows amounts with two decimals', () => {
     expect(html).toContain('10.00');
   });
+
+  it("shows text-marked values the way Google Sheets does (the leading ' is hidden)", () => {
+    const page = renderPreview([
+      {
+        id: 'doc-x',
+        email: { from: 'a@b.co', subject: 'S', received_at: '2026-11-20T10:00:00Z', body: 'b' },
+        output: { destination_sheet: 'Needs review', doc_type: 'order', needs_review: true, review_reasons: 'r', order_date: "'03/04/2026", customer_name: "'=HYPERLINK(1)" },
+      },
+    ]);
+    expect(page).toContain('<td dir="auto">03/04/2026</td>');
+    expect(page).toContain('<td dir="auto">=HYPERLINK(1)</td>');
+  });
 });
+

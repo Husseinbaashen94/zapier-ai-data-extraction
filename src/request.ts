@@ -84,6 +84,32 @@ export function buildExtractionRequest(email: IncomingEmail, opts: { model?: str
   };
 }
 
+/**
+ * The request the real Zap makes: Zapier's Anthropic step sends the system prompt and the user
+ * message with Gmail fields inserted as-is (no escaping, no length cut) and can't ask for
+ * structured output. The live evaluation uses this so its results describe the actual Zap.
+ */
+export function buildZapierStyleRequest(email: IncomingEmail, opts: { model?: string } = {}): ExtractionRequest {
+  const content = layout({
+    subject: email.subject,
+    from: email.from,
+    date: email.received_at,
+    body: email.body,
+    attachment: email.attachment_text ?? 'none',
+  });
+  return {
+    headers: { ...ANTHROPIC_HEADERS },
+    body: {
+      model: opts.model || DEFAULT_MODEL,
+      max_tokens: 16000,
+      system: renderSystemPrompt(),
+      messages: [{ role: 'user', content }],
+      output_config: { effort: 'medium' },
+      fallbacks: 'default',
+    },
+  };
+}
+
 /** Markdown with the exact text to paste into the Zapier Anthropic (Claude) step. */
 export function renderZapierAiStep(): string {
   const [subject, from, date, body, attachment] = ZAPIER_FIELDS;

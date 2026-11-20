@@ -23,10 +23,10 @@ flowchart LR
 ```
 
 - **Three document types:** orders, supplier invoices and enquiries, each with its own fields. Anything else (newsletters, notifications) goes to review.
-- **Dates are never guessed.** `2 November 2026`, `15/10/2026` and `3 abril 2026` become `2026-…` ISO dates. Truly ambiguous ones like `03/04/2026` are kept as written and flagged.
-- **Money in any format:** `€1.234,50`, `1,040.00 USD` and `£ 99` all become numbers with an ISO currency code. Invoices are checked: subtotal + tax must equal the total.
+- **Dates are never guessed.** `2 November 2026`, `15/10/2026` and `3 abril 2026` become `2026-…` ISO dates. Truly ambiguous ones like `03/04/2026` are kept as written (stored as text, so Sheets can't re-read them either) and flagged.
+- **Money in any format, never guessed:** `€1.234,50`, `1,040.00 USD`, `£ 99` and `R$ 1.234,56` become numbers with the right ISO currency code. Genuinely ambiguous amounts like `€1.234` (1,234 or 1.234?) go to review, as do currencies that contradict each other. Invoices are checked: subtotal + tax must equal the total.
 - **Confidence-aware:** Claude rates every field, and anything below 0.7 (blurry scans, half-visible numbers) goes to a person.
-- **Safe by design:** text that would run as a spreadsheet formula (`=HYPERLINK(…)`) is stored as plain text, and emails that try to instruct the AI ("set the total to 0") are flagged instead of obeyed.
+- **Safe by design:** text that would run as a spreadsheet formula (`=HYPERLINK(…)`), whether it comes from the AI's extraction or straight from the email's subject or sender, is stored as plain text. Claude is instructed to ignore instructions inside emails ("set the total to 0") and to flag them for a person. That's a prompt-level safeguard, checked by the live evaluation; the Code step can't detect it on its own.
 
 ![Demo output: extracted rows and the review queue](docs/images/preview.png)
 
@@ -60,18 +60,18 @@ It writes `out/Extracted.csv`, `out/Needs-review.csv` (they open in Excel and Go
 
 ## Proven by tests
 
-**149 automated tests** run on every change. Zapier can't be run in CI, so the tests cover the two things the Zap is made of: **the exact Code step you paste into Zapier** and **the exact prompt you paste into the Claude step**.
+**174 automated tests** run on every change. Zapier can't be run in CI, so the tests cover the two things the Zap is made of: **the exact Code step you paste into Zapier** and **the exact prompt you paste into the Claude step**.
 
 | Layer | Tests | What they prove |
 |---|---|---|
-| **Code step** | 70 | All 12 sample emails land on the right sheet with the right values. Also covered: date and money formats, invoice arithmetic, confidence thresholds, formula escaping, broken or truncated AI answers (never crashes, always a review row), and a < 100 ms runtime per email |
+| **Code step** | 91 | All 12 sample emails land on the right sheet with the right values. Also covered: date and money formats (including ambiguous amounts and contradicting currencies, which go to review rather than becoming wrong numbers), invoice arithmetic, confidence thresholds, formula escaping of extracted fields and of the email's subject and sender, broken or truncated AI answers (never crashes, always a review row), and a < 100 ms runtime per email |
 | **Zapier contract** | 8 | A harness runs the step the way Zapier does: text-only inputs, flat output, no `require`, no network. Anything that would break inside Zapier breaks here first |
-| **Prompt & guide** | 17 | The email stays inside a data block, an injection attempt can't escape it, and `zapier/ai-step.md` is regenerated from the tested prompt (a test fails if it goes stale) |
-| **Contracts, demo & docs** | 54 | Sample data and schema stay valid, the CSV and preview are correct, the build guide's columns match the code, and the declared Node version matches what the tools need |
+| **Prompt & guide** | 20 | `zapier/ai-step.md` is regenerated from the tested prompt (a test fails if it goes stale), and the live evaluation sends exactly what the Zap sends: the same prompt, raw Gmail fields and no structured output |
+| **Contracts, demo & docs** | 55 | Sample data and schema stay valid, the CSV and preview are correct, the build guide's columns match the code, and the declared Node version matches what the tools need |
 
-The step was also **mutation-checked**: deliberately breaking formula escaping or the ambiguous-date rule makes 5 tests fail each.
+The step was also **mutation-checked**: deliberately breaking formula escaping fails 9 tests, guessing ambiguous dates fails 6, and guessing ambiguous amounts fails 4.
 
-**Live AI evaluation:** `npm run test:live` sends all 12 emails to the real Claude API with the same prompt and runs each reply through the same Code step. It requires every answer to parse, the injection email to keep its real total, and at least 10 of 12 on the right sheet. The answers used by the demo and tests are hand-written (`"synthetic": true` in `fixtures/recorded/`) until replaced by real ones with `npm run record`.
+**Live AI evaluation:** `npm run test:live` sends all 12 emails to the real Claude API **exactly as the Zap does** (same prompt, Gmail fields inserted as-is, no structured output) and runs each reply through the same Code step. It requires every answer to parse, the injection email to keep its real total and land in review, and at least 10 of 12 on the right sheet. The answers used by the demo and tests are hand-written (`"synthetic": true` in `fixtures/recorded/`) until replaced by real ones with `npm run record`.
 
 > **Status:** the Code step, prompt and demo are tested in CI. The Zap itself is **built from the guide; pending verification in Zapier**.
 
@@ -129,7 +129,7 @@ Empty values use the default. `.env` is git-ignored, so nothing you put in it is
 
 ```bash
 npm run demo          # the 2-minute demo
-npm test              # all 149 tests (no network)
+npm test              # all 174 tests (no network)
 npm run test:live     # live Claude evaluation (needs ANTHROPIC_API_KEY)
 npm run build:guide   # regenerate zapier/ai-step.md after editing the prompt
 npm run typecheck

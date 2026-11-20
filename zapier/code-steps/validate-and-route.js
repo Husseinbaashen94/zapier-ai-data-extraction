@@ -21,7 +21,11 @@ const EMAIL_FIELDS = ['customer_email', 'contact_email'];
 const MIN_CONFIDENCE = 0.7;
 
 const CURRENCY_CODES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'NZD', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'AED', 'SAR', 'QAR', 'KWD', 'INR', 'CNY', 'HKD', 'SGD', 'MYR', 'ZAR', 'MXN', 'BRL'];
-const CURRENCY_SYMBOLS = { '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR', $: 'USD' };
+const CURRENCY_SYMBOLS = { '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR' };
+const PREFIXED_DOLLARS = { US$: 'USD', R$: 'BRL', C$: 'CAD', CA$: 'CAD', A$: 'AUD', AU$: 'AUD', NZ$: 'NZD', HK$: 'HKD', S$: 'SGD', SG$: 'SGD', MX$: 'MXN' };
+// Currencies written with a decimal point and comma thousands ($1,000.00), and 3-decimal currencies.
+const DOT_DECIMAL = ['USD', 'GBP', 'JPY', 'CAD', 'AUD', 'NZD', 'HKD', 'SGD', 'INR', 'CNY', 'MYR', 'MXN', 'AED', 'SAR', 'QAR', 'KWD'];
+const THREE_DECIMAL = ['KWD'];
 
 const MONTHS = {
   january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
@@ -64,6 +68,8 @@ function isRealDate(y, m, d) {
   const date = new Date(Date.UTC(y, m - 1, d));
   return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
+/** A leading ' makes Google Sheets keep a value as typed text instead of re-reading it as a date. */
+const asText = (value) => "'" + value;
 const iso = (y, m, d) => y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 
 function normaliseDate(raw, field) {
@@ -87,47 +93,83 @@ function normaliseDate(raw, field) {
     if (a > 12 && isRealDate(y, b, a)) return { value: iso(y, b, a) };
     if (b > 12 && isRealDate(y, a, b)) return { value: iso(y, a, b) };
     if (a === b && isRealDate(y, a, b)) return { value: iso(y, a, b) };
-    if (a <= 12 && b <= 12) return { value: text, problem: 'ambiguous date in ' + field };
+    if (a <= 12 && b <= 12) return { value: asText(text), problem: 'ambiguous date in ' + field };
   }
-  return { value: text, problem: 'unreadable date in ' + field };
+  return { value: asText(text), problem: 'unreadable date in ' + field };
 }
 
-function parseAmount(raw, field) {
-  if (typeof raw === 'number') return { value: Math.round(raw * 100) / 100 };
+/** Every currency the text mentions, as ISO codes, in order of appearance. */
+function currencySignals(text) {
+  const signals = [];
+  const add = (code) => {
+    if (signals.indexOf(code) === -1) signals.push(code);
+  };
+  let rest = String(text).toUpperCase();
+  rest = rest.replace(/[A-Z]{1,3}\$/g, (m) => {
+    add(PREFIXED_DOLLARS[m] || 'unknown');
+    return ' ';
+  });
+  (rest.match(/\b[A-Z]{3}\b/g) || []).forEach((c) => {
+    if (CURRENCY_CODES.indexOf(c) !== -1) add(c);
+  });
+  if (rest.indexOf('$') !== -1) add('USD');
+  Object.keys(CURRENCY_SYMBOLS).forEach((sym) => {
+    if (rest.indexOf(sym) !== -1) add(CURRENCY_SYMBOLS[sym]);
+  });
+  return signals;
+}
+
+/** One ISO code from the currency field and the amounts, or a problem when unknown or contradictory. */
+function resolveCurrency(fields) {
+  const texts = [fields.currency].concat(AMOUNT_FIELDS.map((f) => fields[f])).filter((v) => typeof v === 'string');
+  const codes = [];
+  texts.forEach((t) =>
+    currencySignals(t).forEach((c) => {
+      if (codes.indexOf(c) === -1) codes.push(c);
+    }),
+  );
+  if (codes.indexOf('unknown') !== -1 || codes.length === 0) return { code: null, problem: 'unknown currency' };
+  if (codes.length > 1) return { code: codes[0], problem: 'currencies disagree (' + codes.join(', ') + ')' };
+  return { code: codes[0] };
+}
+
+function parseAmount(raw, field, currency) {
+  if (typeof raw === 'number') return { value: Math.round(raw * 1000) / 1000 };
   let text = String(raw)
-    .replace(/[A-Za-z]+/g, '')
+    .replace(/[A-Za-z]{1,3}\$/g, (m) => (PREFIXED_DOLLARS[m.toUpperCase()] ? '' : m))
+    .replace(/\b[A-Za-z]{3}\b/g, (m) => (CURRENCY_CODES.indexOf(m.toUpperCase()) !== -1 ? '' : m))
     .replace(/[€£¥₹$]/g, '')
-    .replace(/[\s  ']/g, '');
+    .replace(/[\s\u00a0\u202f']/g, '');
   const negative = /^-/.test(text);
   text = text.replace(/^-/, '');
-  if (!/^[\d.,]+$/.test(text)) return { value: String(raw), problem: 'unreadable amount in ' + field };
-  const lastDot = text.lastIndexOf('.');
-  const lastComma = text.lastIndexOf(',');
-  if (lastDot !== -1 && lastComma !== -1) {
-    const decimal = lastDot > lastComma ? '.' : ',';
+  // Any letters left over (1e3, 1.5k, 12abc) mean we can't be sure what the number is.
+  if (!/^\d[\d.,]*$/.test(text) || /[.,]$/.test(text)) return { value: String(raw), problem: 'unreadable amount in ' + field };
+
+  const hasDot = text.indexOf('.') !== -1;
+  const hasComma = text.indexOf(',') !== -1;
+  if (hasDot && hasComma) {
+    const decimal = text.lastIndexOf('.') > text.lastIndexOf(',') ? '.' : ',';
     const thousands = decimal === '.' ? ',' : '.';
     text = text.split(thousands).join('').replace(decimal, '.');
-  } else if (lastComma !== -1) {
-    text = /,\d{1,2}$/.test(text) && text.split(',').length === 2 ? text.replace(',', '.') : text.split(',').join('');
-  } else if (lastDot !== -1 && /^\d{1,3}(\.\d{3})+$/.test(text) && text.split('.').length > 2) {
-    text = text.split('.').join('');
+  } else if (hasDot || hasComma) {
+    const sep = hasDot ? '.' : ',';
+    const parts = text.split(sep);
+    if (parts.length > 2) {
+      // 1.234.567 or 1,234,567: only thousands grouping is valid here
+      if (!parts.slice(1).every((p) => p.length === 3)) return { value: String(raw), problem: 'unreadable amount in ' + field };
+      text = parts.join('');
+    } else if (parts[1].length === 3) {
+      // 1.234 or 1,234: a thousands separator or a decimal point? Only the currency's convention can tell.
+      if (sep === ',' && DOT_DECIMAL.indexOf(currency) !== -1) text = parts.join('');
+      else if (sep === '.' && THREE_DECIMAL.indexOf(currency) !== -1) text = parts.join('.');
+      else return { value: String(raw), problem: 'ambiguous amount in ' + field };
+    } else {
+      text = parts.join('.');
+    }
   }
   const value = Number(text);
   if (!isFinite(value) || text === '') return { value: String(raw), problem: 'unreadable amount in ' + field };
-  return { value: Math.round((negative ? -value : value) * 100) / 100 };
-}
-
-/** ISO code from the currency field, falling back to symbols or codes inside the amounts. */
-function resolveCurrency(fields) {
-  const texts = [fields.currency].concat(AMOUNT_FIELDS.map((f) => fields[f])).filter((v) => typeof v === 'string');
-  for (const text of texts) {
-    const code = (text.toUpperCase().match(/\b[A-Z]{3}\b/g) || []).find((c) => CURRENCY_CODES.indexOf(c) !== -1);
-    if (code) return code;
-  }
-  for (const symbol of ['€', '£', '¥', '₹', '$']) {
-    if (texts.some((t) => t.indexOf(symbol) !== -1)) return CURRENCY_SYMBOLS[symbol];
-  }
-  return null;
+  return { value: Math.round((negative ? -value : value) * 1000) / 1000 };
 }
 
 function normaliseEmail(raw, field) {
@@ -142,8 +184,8 @@ const sheetSafe = (value) => (typeof value === 'string' && /^[=+\-@]/.test(value
 
 function processAnswer(input) {
   const base = {
-    source_from: String(input.email_from || ''),
-    source_subject: String(input.email_subject || ''),
+    source_from: sheetSafe(String(input.email_from || '')),
+    source_subject: sheetSafe(String(input.email_subject || '')),
     processed_at: String(input.email_received_at || ''),
   };
   const toReview = (docType, reasons, extra) =>
@@ -159,6 +201,7 @@ function processAnswer(input) {
 
   const row = {};
   const hasAmounts = AMOUNT_FIELDS.some((f) => FIELDS_BY_TYPE[type].indexOf(f) !== -1);
+  const currency = hasAmounts ? resolveCurrency(answer.fields) : { code: null };
   for (const field of FIELDS_BY_TYPE[type]) {
     const raw = answer.fields[field];
     if (raw === null || raw === undefined || raw === '') {
@@ -167,7 +210,7 @@ function processAnswer(input) {
     }
     let result = { value: typeof raw === 'number' ? raw : String(raw).trim() };
     if (DATE_FIELDS.indexOf(field) !== -1) result = normaliseDate(raw, field);
-    else if (AMOUNT_FIELDS.indexOf(field) !== -1) result = parseAmount(raw, field);
+    else if (AMOUNT_FIELDS.indexOf(field) !== -1) result = parseAmount(raw, field, currency.code);
     else if (EMAIL_FIELDS.indexOf(field) !== -1) result = normaliseEmail(raw, field);
     else if (field === 'currency') result = { value: '' }; // filled in below
     if (result.problem) reasons.push(result.problem);
@@ -179,12 +222,8 @@ function processAnswer(input) {
   }
 
   if (hasAmounts) {
-    const code = resolveCurrency(answer.fields);
-    if (code) row.currency = code;
-    else {
-      row.currency = sheetSafe(answer.fields.currency ? String(answer.fields.currency) : '');
-      reasons.push('unknown currency');
-    }
+    row.currency = currency.code || sheetSafe(answer.fields.currency ? String(answer.fields.currency) : '');
+    if (currency.problem) reasons.push(currency.problem);
   }
 
   if (type === 'invoice' && [row.subtotal, row.tax, row.total].every((v) => typeof v === 'number')) {
@@ -224,8 +263,8 @@ try {
     needs_review: true,
     review_reasons: 'internal error: ' + (error && error.message ? error.message : String(error)),
     overall_confidence: 0,
-    source_from: String(inputData.email_from || ''),
-    source_subject: String(inputData.email_subject || ''),
+    source_from: String(inputData.email_from || '').replace(/^([=+\-@])/, "'$1"),
+    source_subject: String(inputData.email_subject || '').replace(/^([=+\-@])/, "'$1"),
     processed_at: String(inputData.email_received_at || ''),
   };
 }
